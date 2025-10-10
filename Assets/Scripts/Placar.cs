@@ -21,7 +21,7 @@ public class Placar : MonoBehaviour
         InvokeRepeating("pontua", 0.3f, 0.3f);
 
     }
-        void pontua()
+    void pontua()
     {
         Debug.Log("Pontua chamado"); // Adicione esta linha
         placar += 1;
@@ -34,4 +34,19 @@ public class Placar : MonoBehaviour
         mostrador.text = "Pontuação: " + placar;
         mostradorRecorde.text = "Recorde: " + recorde;
     }
+    
+    public void AdicionarPontos(int valor)
+{
+    placar += valor;
+
+    if (placar > recorde)
+    {
+        recorde = placar;
+        PlayerPrefs.SetInt("recorde", recorde);
+    }
+
+    mostrador.text = "Pontuação: " + placar;
+    mostradorRecorde.text = "Recorde: " + recorde;
+}
+
 }
