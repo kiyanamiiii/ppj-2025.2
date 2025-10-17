@@ -34,19 +34,20 @@ public class Placar : MonoBehaviour
         mostrador.text = "Pontuação: " + placar;
         mostradorRecorde.text = "Recorde: " + recorde;
     }
-    
-    public void AdicionarPontos(int valor)
-{
-    placar += valor;
 
-    if (placar > recorde)
+    public void AdicionarPontos(int valor)
     {
-        recorde = placar;
-        PlayerPrefs.SetInt("recorde", recorde);
+        placar += valor;
+
+        if (placar > recorde)
+        {
+            recorde = placar;
+            PlayerPrefs.SetInt("recorde", recorde);
+        }
+
+        mostrador.text = "Pontuação: " + placar;
+        mostradorRecorde.text = "Recorde: " + recorde;
     }
 
-    mostrador.text = "Pontuação: " + placar;
-    mostradorRecorde.text = "Recorde: " + recorde;
-}
-
+public int Pontos => placar;
 }

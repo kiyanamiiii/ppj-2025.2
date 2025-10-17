@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Collectable : MonoBehaviour
+public class PointCollectible : MonoBehaviour
 {
     public int valor = 1; // Quantos pontos esse item vale
     private Placar placar; // Referência ao script de pontuação
@@ -16,13 +16,17 @@ public class Collectable : MonoBehaviour
         // Verifica se quem encostou foi o jogador
         if (collision.CompareTag("Player"))
         {
-            if (placar != null)
-            {
-                placar.AdicionarPontos(valor);
-            }
-
-            // Destroi o item
-            Destroy(gameObject);
+            Coletar();
         }
+    }
+
+    public void Coletar()
+    {
+        if (placar != null)
+        {
+            placar.AdicionarPontos(valor);
+        }
+
+        Destroy(gameObject);
     }
 }

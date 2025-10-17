@@ -4,69 +4,97 @@ using UnityEngine;
 
 public class SpawnerScript : MonoBehaviour
 {
-    // Platforms to spawn (previously 'vetor')
+    [Header("Prefabs")]
     public GameObject[] platformPrefabs;
-
-    // NEW: Collectibles to potentially spawn on top of the platform
     public GameObject[] collectiblePrefabs;
 
-    // NEW: Chance (as a percentage 0-100) for a collectible to spawn
-    [Range(0, 100)]
-    public int collectibleSpawnChance = 50;
+    [Header("Configuração de spawn")]
+    [Range(0, 100)] public int collectibleSpawnChance = 50;
+    public float spawnMin = 1f;
+    public float spawnMax = 2f;
+    public float spawnHeightOffset = 1f;
+    public int maxSpawnAttempts = 5; // Máximo de tentativas antes de desistir
 
-    public float spawnMin;
-    public float spawnMax;
-    public float spawnHeightOffset = 1.0f;
+    private float nextYPosition;
 
-    // Start is called before the first frame update
     void Start()
     {
+        nextYPosition = transform.position.y;
         Spawn();
     }
 
     void Spawn()
     {
-        // 1. --- Spawn the Platform ---
+        // --- 1. Escolhe plataforma ---
+        GameObject platformPrefab = platformPrefabs[Random.Range(0, platformPrefabs.Length)];
 
-        // Pick a random platform
-        GameObject platformToSpawn = platformPrefabs[Random.Range(0, platformPrefabs.Length)];
+        // Calcula posição base
+        Vector3 spawnPos = new Vector3(
+            transform.position.x,
+            nextYPosition,
+            transform.position.z
+        );
 
-        // Calculate the base spawn position
-        Vector3 platformSpawnPosition = transform.position;
-        // The Y-offset from the spawner's transform is applied here. 
-        // Note: For platforms, you usually want the offset to be relative 
-        // to the spawner's X/Z location, but with the Y-coordinate determined by the game logic.
-        // If your spawner is at Y=0 and you want platforms at Y=2, set spawnHeightOffset to 2.0f.
-        platformSpawnPosition.y += spawnHeightOffset;
+        // --- 2. Tenta achar posição livre ---
+        bool encontrouPosicao = false;
+        int tentativas = 0;
 
-        // Instantiate the platform
-        GameObject newPlatform = Instantiate(platformToSpawn, platformSpawnPosition, Quaternion.identity);
+        Renderer platformRenderer = platformPrefab.GetComponent<Renderer>();
+        float alturaPlataforma = platformRenderer != null ? platformRenderer.bounds.size.y : 1f;
 
-
-        // 2. --- Attempt to Spawn a Collectible on the Platform ---
-
-        // Check if there are any collectibles defined AND if the chance passes
-        if (collectiblePrefabs.Length > 0 && Random.Range(0, 100) < collectibleSpawnChance)
+        while (!encontrouPosicao && tentativas < maxSpawnAttempts)
         {
-            // Pick a random collectible
-            GameObject collectibleToSpawn = collectiblePrefabs[Random.Range(0, collectiblePrefabs.Length)];
+            Collider2D colisao = Physics2D.OverlapBox(
+                spawnPos,
+                new Vector2(3f, alturaPlataforma * 1.2f), // área de checagem
+                0f
+            );
 
-            // Calculate the collectible's position
-            // We use the new platform's position, then add the height of the platform
-            // and half the height of the collectible to place it on top.
-            Vector3 collectibleSpawnPosition = newPlatform.transform.position;
+            if (colisao == null)
+            {
+                encontrouPosicao = true;
+                break;
+            }
 
-            // This is a basic way to find the top of the platform.
-            // You may need to adjust this depending on the pivot points/colliders of your prefabs.
-            // Assuming platform height is roughly 1 unit and collectible height is 1 unit:
-            collectibleSpawnPosition.y += 1.0f; // Adjust this value in the Inspector as needed
-
-            // Instantiate the collectible
-            Instantiate(collectibleToSpawn, collectibleSpawnPosition, Quaternion.identity);
+            // Caso esteja colidindo, move um pouco pra cima e tenta de novo
+            spawnPos.y += alturaPlataforma + spawnHeightOffset;
+            tentativas++;
         }
 
+        if (!encontrouPosicao)
+        {
+            Debug.LogWarning("Spawner não encontrou posição livre. Pulando spawn desta plataforma.");
+            Invoke("Spawn", Random.Range(spawnMin, spawnMax));
+            return;
+        }
 
-        // 3. --- Schedule the next spawn ---
+        // --- 3. Instancia plataforma ---
+        GameObject novaPlataforma = Instantiate(platformPrefab, spawnPos, Quaternion.identity);
+
+        // Atualiza próxima posição base
+        nextYPosition = spawnPos.y + alturaPlataforma + spawnHeightOffset;
+
+        // --- 4. Possível coletável ---
+        if (collectiblePrefabs.Length > 0 && Random.Range(0, 100) < collectibleSpawnChance)
+        {
+            GameObject coletavelPrefab = collectiblePrefabs[Random.Range(0, collectiblePrefabs.Length)];
+
+            Vector3 posColetavel = novaPlataforma.transform.position;
+            posColetavel.y += alturaPlataforma / 2f + 1f;
+
+            // Checa se o espaço acima da plataforma está livre
+            if (!Physics2D.OverlapCircle(posColetavel, 0.4f))
+                Instantiate(coletavelPrefab, posColetavel, Quaternion.identity);
+        }
+
+        // --- 5. Agenda próxima ---
         Invoke("Spawn", Random.Range(spawnMin, spawnMax));
+    }
+
+    // Gizmos para visualizar área de checagem
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireCube(transform.position, new Vector3(3f, 1.2f, 1f));
     }
 }

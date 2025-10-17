@@ -1,101 +1,108 @@
-using UnityEngine;
-using UnityEngine.SceneManagement; // Adicionado para carregar a cena
+   using UnityEngine;
+   using UnityEngine.SceneManagement; // Adicionado para carregar a cena
 
-public class RunnerCharacter : MonoBehaviour
-{
-    // --- Public/Inspector Variables ---
+   public class RunnerCharacter : MonoBehaviour
+   {
+       // --- Public/Inspector Variables ---
 
-    [SerializeField] private float m_RunSpeed = 10f;
-    [SerializeField] private float m_JumpForce = 400f;
-    [SerializeField] private bool m_AirControl = false;
-    [SerializeField] private LayerMask m_WhatIsGround;
-    [SerializeField] private int m_MaxJumpCount = 2;
+       [SerializeField] private float m_RunSpeed = 10f;
+       [SerializeField] private float m_JumpForce = 400f;
+       [SerializeField] private bool m_AirControl = false;
+       [SerializeField] private LayerMask m_WhatIsGround;
+       [SerializeField] private int m_MaxJumpCount = 2;
 
-    // Opcional: tag que seus obst·culos usar„o (configure no Inspector)
-    [SerializeField] private string m_ObstacleTag = "Obstacle";
+       // Opcional: tag que seus obst√°culos usar√£o (configure no Inspector)
+       [SerializeField] private string m_ObstacleTag = "Obstacle";
 
-    // --- Private Variables ---
+       // --- Private Variables ---
 
-    private int m_JumpCount = 0;
-    private Transform m_GroundCheck;
-    const float k_GroundedRadius = .2f;
-    private bool m_Grounded;
-    private Animator m_Anim;
-    private Rigidbody2D m_Rigidbody2D;
+       private int m_JumpCount = 0;
+       private Transform m_GroundCheck;
+       const float k_GroundedRadius = .2f;
+       private bool m_Grounded;
+       private Animator m_Anim;
+       private Rigidbody2D m_Rigidbody2D;
 
-    private void Awake()
-    {
-        m_GroundCheck = transform.Find("GroundCheck");
-        m_Anim = GetComponent<Animator>();
-        m_Rigidbody2D = GetComponent<Rigidbody2D>();
-    }
+       private void Awake()
+       {
+           m_GroundCheck = transform.Find("GroundCheck");
+           m_Anim = GetComponent<Animator>();
+           m_Rigidbody2D = GetComponent<Rigidbody2D>();
+       }
 
-    private void FixedUpdate()
-    {
-        // [LÛgica de verificaÁ„o do ch„o e movimento contÌnuo (mantida)]
-        m_Grounded = false;
-        Collider2D[] colliders = Physics2D.OverlapCircleAll(m_GroundCheck.position, k_GroundedRadius, m_WhatIsGround);
+       private void Update()
+       {
+           // Check for input to trigger jump
+           if (Input.GetKeyDown(KeyCode.Space) ||  // Space key for PC testing
+               Input.GetMouseButtonDown(0) ||     // Mouse click for PC simulation of screen click
+               (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began))  // Screen touch for mobile
+           {
+               Move(true);  // Call Move with jump = true
+           }
+       }
 
-        for (int i = 0; i < colliders.Length; i++)
-        {
-            if (colliders[i].gameObject != gameObject)
-            {
-                m_Grounded = true;
-                break;
-            }
-        }
+       private void FixedUpdate()
+       {
+           // [L√≥gica de verifica√ß√£o do ch√£o e movimento cont√≠nuo (mantida)]
+           m_Grounded = false;
+           Collider2D[] colliders = Physics2D.OverlapCircleAll(m_GroundCheck.position, k_GroundedRadius, m_WhatIsGround);
 
-        m_Anim.SetBool("Ground", m_Grounded);
+           for (int i = 0; i < colliders.Length; i++)
+           {
+               if (colliders[i].gameObject != gameObject)
+               {
+                   m_Grounded = true;
+                   break;
+               }
+           }
 
-        if (m_Grounded)
-        {
-            m_JumpCount = 0;
-        }
+           m_Anim.SetBool("Ground", m_Grounded);
 
-        m_Anim.SetFloat("vSpeed", m_Rigidbody2D.velocity.y);
+           if (m_Grounded)
+           {
+               m_JumpCount = 0;
+           }
 
-        if (m_Grounded || m_AirControl)
-        {
-            m_Rigidbody2D.velocity = new Vector2(m_RunSpeed, m_Rigidbody2D.velocity.y);
-        }
+           m_Anim.SetFloat("vSpeed", m_Rigidbody2D.velocity.y);
 
-        m_Anim.SetFloat("Speed", m_RunSpeed);
-    }
+           if (m_Grounded || m_AirControl)
+           {
+               m_Rigidbody2D.velocity = new Vector2(m_RunSpeed, m_Rigidbody2D.velocity.y);
+           }
 
-    public void Move(bool jump)
-    {
-        // [LÛgica de Pulo (mantida)]
-        if (jump && (m_Grounded || m_JumpCount < m_MaxJumpCount))
-        {
-            m_JumpCount++;
-            m_Grounded = false;
-            m_Anim.SetBool("Ground", false);
+           m_Anim.SetFloat("Speed", m_RunSpeed);
+       }
 
-            m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, 0f);
-            m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
-        }
-    }
+       public void Move(bool jump)
+       {
+           // [L√≥gica de Pulo (mantida)]
+           if (jump && (m_Grounded || m_JumpCount < m_MaxJumpCount))
+           {
+               m_JumpCount++;
+               m_Grounded = false;
+               m_Anim.SetBool("Ground", false);
 
-    // --- NOVA L”GICA DE GAME OVER (COLIS√O) ---
+               m_Rigidbody2D.velocity = new Vector2(m_Rigidbody2D.velocity.x, 0f);
+               m_Rigidbody2D.AddForce(new Vector2(0f, m_JumpForce));
+           }
+       }
 
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        // Verifica se o objeto com o qual colidiu tem a Tag de obst·culo
-        if (collision.gameObject.CompareTag(m_ObstacleTag))
-        {
-            // Se for um obst·culo, ativamos o Game Over
-            GameOver();
-        }
-    }
+       // --- NOVA L√ìGICA DE GAME OVER (COLIS√ÉO) ---
+       public void GameOver()  // Changed to public for accessibility
+       {
+           Debug.Log("Game Over! Tocou em um obst√°culo.");
 
-    private void GameOver()
-    {
-        Debug.Log("Game Over! Tocou em um obst·culo.");
+           // Recarrega a cena atual (como se fosse um "Retry" autom√°tico)
+           SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+       }
 
-        // Parar o tempo no jogo È uma opÁ„o comum para o Game Over
-        // Time.timeScale = 0f; 
-
-        // Recarrega a cena atual (como se fosse um "Retry" autom·tico)
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-    }
-}
+       private void OnCollisionEnter2D(Collision2D collision)
+       {
+           // Verifica se o objeto com o qual colidiu tem a Tag de obst√°culo
+           if (collision.gameObject.CompareTag(m_ObstacleTag))
+           {
+               GameOver();  // Call the method
+           }
+       }
+   }
+   
